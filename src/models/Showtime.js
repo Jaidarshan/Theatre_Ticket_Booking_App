@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 const showtimeSchema = new mongoose.Schema({
   movie: { type: mongoose.Schema.Types.ObjectId, ref: 'Movie' },
   theatre: { type: mongoose.Schema.Types.ObjectId, ref: 'Theatre' },
+  screenName: { type: String, required: true },
   date: String,
   time: String,
   price: Number,
