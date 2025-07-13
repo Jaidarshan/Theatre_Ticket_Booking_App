@@ -9,32 +9,26 @@ export default function BookingPage() {
   const [showtime, setShowtime] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Fetch showtime details
+  const fetchShowtime = async (id) => {
+    try {
+      const res = await fetch(`/api/showtimes/${id}`);
+      const data = await res.json();
+      if (data.success) {
+        setShowtime(data.showtime);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err) {
+      setMessage('Failed to load showtime.');
+    }
+  };
+
   useEffect(() => {
-    if (!showtimeId || typeof showtimeId !== 'string') return;
-
-    const id = showtimeId.replace(/^_/, ''); // remove accidental underscore
-
-    fetch(`/api/showtimes/${id}`)
-      .then(async res => {
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Fetch failed: ${res.status} - ${errText}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          setShowtime(data.showtime);
-        } else {
-          throw new Error(data.error || 'Failed to load showtime');
-        }
-      })
-      .catch(err => {
-        console.error('Showtime fetch error:', err);
-        setMessage('Failed to load showtime. Please try again.');
-      });
+    if (!showtimeId) return;
+    const id = showtimeId.startsWith('_') ? showtimeId.slice(1) : showtimeId;
+    fetchShowtime(id);
   }, [showtimeId]);
 
   const handleBooking = async () => {
@@ -44,41 +38,40 @@ export default function BookingPage() {
     }
 
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) {
+    if (!user || !user._id) {
       router.push('/login');
       return;
     }
 
-    console.log('Sending selected seats to backend:', selectedSeats);
+    const payload = {
+      userId: user._id,
+      showtimeId: showtime._id,
+      seats: selectedSeats,
+    };
 
+    setLoading(true);
     const res = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user._id,
-        movieId: showtime.movie,
-        theatreId: showtime.theatre._id,
-        showtimeId: showtime._id,
-        seats: selectedSeats,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
+    setLoading(false);
 
-    if (data.success) {
+    if (res.ok && data.success) {
       setMessage('Booking successful!');
-      setSelectedSeats([]);
+      setSelectedSeats([]); // Reset seats
+
+      // Re-fetch latest showtime to update booked seats from DB
+      await fetchShowtime(showtime._id);
     } else {
       setMessage(data.error || 'Booking failed.');
     }
   };
 
   if (!showtime) {
-    return (
-      <div className="text-center mt-10 text-lg">
-        {message || 'Loading showtime details...'}
-      </div>
-    );
+    return <div className="text-center mt-10 text-lg">{message || 'Loading showtime...'}</div>;
   }
 
   const totalPrice = selectedSeats.length * showtime.price;
@@ -86,17 +79,18 @@ export default function BookingPage() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">
-        Booking for {showtime.movieTitle || 'Movie'}
+        Booking for {showtime.movie.title}
       </h1>
-      <p className="mb-2"><strong>Theatre:</strong> {showtime.theatre.name}</p>
-      <p className="mb-2"><strong>Screen:</strong> {showtime.screenName}</p>
-      <p className="mb-2"><strong>Date:</strong> {showtime.date}</p>
-      <p className="mb-2"><strong>Time:</strong> {showtime.time}</p>
+      <p><strong>Theatre:</strong> {showtime.theatre.name}</p>
+      <p><strong>Screen:</strong> {showtime.screenName}</p>
+      <p><strong>Date:</strong> {showtime.date}</p>
+      <p><strong>Time:</strong> {showtime.time}</p>
       <p className="mb-4"><strong>Price per Seat:</strong> ₹{showtime.price}</p>
 
       <SeatSelector
         seats={showtime.seats}
         onSeatsChange={setSelectedSeats}
+        selectedSeats={selectedSeats}
       />
 
       <p className="mt-4 font-semibold">Total Price: ₹{totalPrice}</p>
@@ -106,9 +100,9 @@ export default function BookingPage() {
           selectedSeats.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
         }`}
         onClick={handleBooking}
-        disabled={selectedSeats.length === 0}
+        disabled={selectedSeats.length === 0 || loading}
       >
-        Confirm Booking
+        {loading ? 'Booking...' : 'Confirm Booking'}
       </button>
 
       {message && (

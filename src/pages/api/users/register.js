@@ -10,7 +10,17 @@ export default async function handler(req, res) {
     const { name, email, password, phone, isAdmin } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, passwordHash, phone, isAdmin });
-    res.status(201).json({ success: true, user });
+
+    res.status(201).json({
+      success: true,
+      user: {
+        _id: user._id, // 👈 include _id
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        phone: user.phone,
+      },
+    });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
