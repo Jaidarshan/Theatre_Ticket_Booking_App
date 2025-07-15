@@ -46,7 +46,20 @@ export default async function handler(req, res) {
       paymentStatus: 'pending',
     });
 
-    return res.status(201).json({ success: true, booking });
+    return res.status(201).json({
+      success: true,
+      booking,
+      showtime: {
+        movie: showtime.movie,
+        theatre: showtime.theatre,
+        screenName: showtime.screenName,
+        date: showtime.date,
+        time: showtime.time,
+        price: showtime.price,
+        seats: showtime.seats,
+      }
+    });
+
   } catch (err) {
     console.error('Booking error:', err);
     return res.status(500).json({ success: false, error: 'Internal server error' });

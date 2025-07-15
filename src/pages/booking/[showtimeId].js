@@ -1,11 +1,50 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeatSelector from '@/components/SeatSelector';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+
+async function generateTicketPDF({ movieTitle, theatreName, screenName, date, time, language, seats, totalPrice }) {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage();
+  const { width, height } = page.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  let y = height - 50;
+  const lineHeight = 20;
+
+  const lines = [
+    `Movie Ticket`,
+    `Movie: ${movieTitle}`,
+    `Language: ${language}`,
+    `Theatre: ${theatreName}`,
+    `Screen: ${screenName}`,
+    `Date: ${date}`,
+    `Time: ${time}`,
+    `Seats: ${seats.join(', ')}`,
+    `Total Seats: ${seats.length}`,
+    `Total Price: Rs. ${totalPrice}`,
+  ];
+
+  lines.forEach((text) => {
+    page.drawText(text, { x: 50, y, size: 14, font, color: rgb(0, 0, 0) });
+    y -= lineHeight;
+  });
+
+  const pdfBytes = await pdfDoc.save();
+
+  // Trigger download
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${movieTitle.replace(/\s+/g, '_')}_Ticket.pdf`;
+  link.click();
+}
+
 
 export default function BookingPage() {
   const router = useRouter();
   const { showtimeId } = router.query;
-
+  const [bookedSeats, setBookedSeats] = useState([]);
   const [showtime, setShowtime] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState('');
@@ -61,10 +100,10 @@ export default function BookingPage() {
 
     if (res.ok && data.success) {
       setMessage('Booking successful!');
-      setSelectedSeats([]); // Reset seats
+      setBookedSeats([...selectedSeats]); // Store booked seats for ticket
+      setSelectedSeats([]); // Clear selection for UI
+      await fetchShowtime(showtime._id); // Refresh to show booked seats
 
-      // Re-fetch latest showtime to update booked seats from DB
-      await fetchShowtime(showtime._id);
     } else {
       setMessage(data.error || 'Booking failed.');
     }
@@ -96,14 +135,32 @@ export default function BookingPage() {
       <p className="mt-4 font-semibold">Total Price: ₹{totalPrice}</p>
 
       <button
-        className={`mt-4 px-4 py-2 rounded text-white ${
-          selectedSeats.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-        }`}
+        className={`mt-4 px-4 py-2 rounded text-white ${selectedSeats.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
+          }`}
         onClick={handleBooking}
         disabled={selectedSeats.length === 0 || loading}
       >
         {loading ? 'Booking...' : 'Confirm Booking'}
       </button>
+      {bookedSeats.length > 0 && (
+        <button
+          className="ml-4 mt-4 px-4 py-2 rounded text-white bg-blue-600 hover:bg-blue-700"
+          onClick={() =>
+            generateTicketPDF({
+              movieTitle: showtime.movie.title,
+              theatreName: showtime.theatre.name,
+              screenName: showtime.screenName,
+              date: showtime.date,
+              time: showtime.time,
+              language: showtime.movie.language,
+              seats: bookedSeats,
+              totalPrice: bookedSeats.length * showtime.price,
+            })
+          }
+        >
+          Download Ticket
+        </button>
+      )}
 
       {message && (
         <p className={`mt-4 ${message.includes('successful') ? 'text-green-600' : 'text-red-600'}`}>
