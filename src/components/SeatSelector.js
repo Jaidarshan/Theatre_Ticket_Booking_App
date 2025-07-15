@@ -1,9 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+// ✅ FIXED SeatSelector with controlled selection
+import { useEffect } from 'react';
 
-export default function SeatSelector({ seats = [], onSeatsChange }) {
-  const [selectedSeats, setSelectedSeats] = useState([]);
-
-  // Seat map built before handler
+export default function SeatSelector({ seats = [], onSeatsChange, selectedSeats = [] }) {
   const seatMap = seats.reduce((map, seat) => {
     map[seat.number] = seat;
     return map;
@@ -13,20 +11,16 @@ export default function SeatSelector({ seats = [], onSeatsChange }) {
     const seat = seatMap[seatNumber];
     if (!seat || seat.booked) return;
 
-    setSelectedSeats((prev) =>
-      prev.includes(seatNumber)
-        ? prev.filter((s) => s !== seatNumber)
-        : [...prev, seatNumber]
-    );
+    const updated = selectedSeats.includes(seatNumber)
+      ? selectedSeats.filter((s) => s !== seatNumber)
+      : [...selectedSeats, seatNumber];
+
+    onSeatsChange(updated);
   };
 
-  const notifyChange = useCallback(() => {
-    onSeatsChange(selectedSeats);
-  }, [selectedSeats, onSeatsChange]);
-
   useEffect(() => {
-    notifyChange();
-  }, [notifyChange]);
+    onSeatsChange([]); // Clear selection when showtime/seats change
+  }, [seats]);
 
   const matrix = seats.reduce(
     (acc, seat) => {
