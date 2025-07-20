@@ -1,5 +1,3 @@
-// pages/api/showtimes/movie/[id].js
-// Gets showtimes for a particular movie
 import dbConnect from '@/lib/mongoose';
 import Showtime from '@/models/Showtime';
 
@@ -12,8 +10,8 @@ export default async function handler(req, res) {
 
   try {
     const showtimes = await Showtime.find({ movie: movieId })
-      .populate('theatre') // get theatre info
-      .populate('movie');  // optional: include movie info
+      .populate('theatre')
+      .populate('movie');
     res.status(200).json({ success: true, showtimes });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

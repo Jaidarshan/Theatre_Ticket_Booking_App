@@ -25,7 +25,6 @@ export default async function handler(req, res) {
 
     const seats = [];
 
-    // Main seats
     const { rows = 0, cols = 0 } = screen.seatLayout || {};
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -37,7 +36,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Balcony seats if enabled
     if (screen.hasBalcony && screen.balconyLayout) {
       const { left, right } = screen.balconyLayout;
 

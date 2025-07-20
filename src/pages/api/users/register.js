@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     res.status(201).json({
       success: true,
       user: {
-        _id: user._id, // 👈 include _id
+        _id: user._id,
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,

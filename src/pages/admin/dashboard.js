@@ -4,7 +4,6 @@ import MovieForm from '@/components/MovieForm';
 import ShowtimeForm from '@/components/ShowtimeForm';
 
 export default function AdminDashboard() {
-  // Simple admin auth (You can extend this with real auth)
   const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user')) : null;
   if (!user || !user.isAdmin) {
     if (typeof window !== 'undefined') window.location.href = '/login';

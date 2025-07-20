@@ -1,4 +1,3 @@
-// src/pages/index.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import MovieCard from '@/components/MovieCard';
@@ -8,7 +7,6 @@ export default function Home() {
   const [movies, setMovies] = useState([]);
   const router = useRouter();
 
-  // redirect to welcome if not logged in
   useEffect(() => {
     const saved = localStorage.getItem('user');
     if (saved) {
@@ -18,7 +16,6 @@ export default function Home() {
     }
   }, [router]);
 
-  // fetch movies once
   useEffect(() => {
     fetch('/api/movies/list')
       .then(r => r.json())

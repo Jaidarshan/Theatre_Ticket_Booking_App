@@ -1,4 +1,3 @@
-// pages/api/showtimes/[id].js
 import dbConnect from '@/lib/mongoose';
 import Showtime from '@/models/Showtime';
 
@@ -15,11 +14,11 @@ export default async function handler(req, res) {
     const showtime = await Showtime.findById(id)
       .populate({
         path: 'movie',
-        select: 'title language', // ✅ include movie title and language
+        select: 'title language', 
       })
       .populate({
         path: 'theatre',
-        select: 'name', // ✅ optionally limit theatre fields too
+        select: 'name', 
       });
 
     if (!showtime) {

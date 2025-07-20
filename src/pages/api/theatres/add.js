@@ -10,7 +10,6 @@ export default async function handler(req, res) {
 
   try {
     if (theatreId) {
-      // Add screen to existing theatre
       const theatre = await Theatre.findById(theatreId);
       if (!theatre) return res.status(404).json({ success: false, error: 'Theatre not found' });
 
@@ -19,7 +18,6 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ success: true, message: 'Screen added to existing theatre', theatre });
     } else {
-      // Create new theatre with one screen
       const newTheatre = await Theatre.create({
         name,
         location,

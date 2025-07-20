@@ -1,4 +1,3 @@
-// ✅ FIXED SeatSelector with controlled selection
 import { useEffect } from 'react';
 
 export default function SeatSelector({ seats = [], onSeatsChange, selectedSeats = [] }) {
@@ -19,7 +18,7 @@ export default function SeatSelector({ seats = [], onSeatsChange, selectedSeats 
   };
 
   useEffect(() => {
-    onSeatsChange([]); // Clear selection when showtime/seats change
+    onSeatsChange([]); 
   }, [seats]);
 
   const matrix = seats.reduce(

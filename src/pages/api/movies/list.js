@@ -1,4 +1,3 @@
-// src/pages/api/movies/list.js
 import dbConnect from '@/lib/mongoose';
 import Movie     from '@/models/Movie';
 import Theatre  from '@/models/Theatre'; 

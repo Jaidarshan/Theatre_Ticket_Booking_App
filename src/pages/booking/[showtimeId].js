@@ -100,9 +100,9 @@ export default function BookingPage() {
 
     if (res.ok && data.success) {
       setMessage('Booking successful!');
-      setBookedSeats([...selectedSeats]); // Store booked seats for ticket
-      setSelectedSeats([]); // Clear selection for UI
-      await fetchShowtime(showtime._id); // Refresh to show booked seats
+      setBookedSeats([...selectedSeats]);
+      setSelectedSeats([]);
+      await fetchShowtime(showtime._id);
 
     } else {
       setMessage(data.error || 'Booking failed.');

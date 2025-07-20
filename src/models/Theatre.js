@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const screenSchema = new mongoose.Schema({
-  name: String, // Screen 1, Screen 2, etc.
+  name: String,
   seatLayout: {
     rows: Number,
     cols: Number,

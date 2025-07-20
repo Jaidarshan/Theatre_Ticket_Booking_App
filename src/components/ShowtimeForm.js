@@ -29,7 +29,6 @@ export default function ShowtimeForm() {
       });
   }, []);
 
-  // Fetch screens when theatre changes
   useEffect(() => {
     const selected = theatres.find(t => t._id === form.theatreId);
     if (selected?.screens) {

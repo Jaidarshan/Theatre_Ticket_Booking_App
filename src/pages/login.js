@@ -25,12 +25,49 @@ export default function Login() {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: 'auto', padding: 20 }}>
-      <h2>Login</h2>
-      <input name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-      <input name="password" placeholder="Password" value={form.password} onChange={handleChange} required type="password" />
-      <button type="submit">Login</button>
-      {message && <p style={{ color: 'red' }}>{message}</p>}
-    </form>
+    <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+      <div className="card p-4 shadow" style={{ maxWidth: '400px', width: '100%' }}>
+        <h2 className="text-center mb-4">Login</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="email" className="form-label">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              className="form-control"
+              placeholder="Enter your email"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="password" className="form-label">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              className="form-control"
+              placeholder="Enter your password"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="d-grid">
+            <button type="submit" className="btn btn-primary w-auto mx-auto px-4">Login</button>
+          </div>
+
+          {message && (
+            <div className="mt-3 alert alert-danger text-center p-2">
+              {message}
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }
