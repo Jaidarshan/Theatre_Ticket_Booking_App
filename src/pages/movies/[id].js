@@ -1,149 +1,124 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { FaArrowLeft, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 
 export default function MovieDetails() {
   const router = useRouter();
   const { id } = router.query;
+
   const [movie, setMovie] = useState(null);
   const [showtimes, setShowtimes] = useState([]);
-  const [availableTheatres, setAvailableTheatres] = useState([]);
-  const [availableScreens, setAvailableScreens] = useState([]);
-  const [availableShowtimes, setAvailableShowtimes] = useState([]);
-  const [selectedTheatre, setSelectedTheatre] = useState('');
-  const [selectedScreen, setSelectedScreen] = useState('');
-  const [selectedShowtimeId, setSelectedShowtimeId] = useState('');
 
   useEffect(() => {
     if (id) {
       fetch(`/api/movies/${id}`)
         .then(res => res.json())
-        .then(data => { if (data.success) setMovie(data.movie); })
+        .then(data => {
+          if (data.success) setMovie(data.movie);
+        })
         .catch(err => console.error('Movie fetch error:', err));
-    }
-  }, [id]);
 
-  useEffect(() => {
-    if (id) {
       fetch(`/api/showtimes/movie/${id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
             setShowtimes(data.showtimes);
-            const theatres = Array.from(
-              new Set(data.showtimes.map(s => s.theatre._id))
-            ).map(tid => data.showtimes.find(s => s.theatre._id === tid).theatre);
-            setAvailableTheatres(theatres);
           }
         })
         .catch(err => console.error('Showtime fetch error:', err));
     }
   }, [id]);
 
-  useEffect(() => {
-    if (selectedTheatre) {
-      const screens = Array.from(
-        new Set(
-          showtimes
-            .filter(s => s.theatre._id === selectedTheatre)
-            .map(s => s.screenName)
-        )
-      );
-      setAvailableScreens(screens);
-      setSelectedScreen('');
-      setSelectedShowtimeId('');
-    } else {
-      setAvailableScreens([]);
-    }
-  }, [selectedTheatre, showtimes]);
-
-  useEffect(() => {
-    if (selectedTheatre && selectedScreen) {
-      const sts = showtimes.filter(
-        s =>
-          s.theatre._id === selectedTheatre &&
-          s.screenName === selectedScreen
-      );
-      setAvailableShowtimes(sts);
-      setSelectedShowtimeId('');
-    } else {
-      setAvailableShowtimes([]);
-    }
-  }, [selectedTheatre, selectedScreen, showtimes]);
-
-  const handleSelectSeat = () => {
-    if (!selectedShowtimeId) return;
-    router.push(`/booking/${selectedShowtimeId}`);
+  const handleBack = () => {
+    router.push('/');
   };
 
-  if (!movie) return <p>Loading movie details...</p>;
+  const handleBookNow = (showtimeId) => {
+    router.push(`/booking/${showtimeId}`);
+  };
+
+  if (!movie) return <div className="text-center mt-5 fs-5">Loading movie details...</div>;
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">{movie.title}</h1>
-      {movie.posterUrl && <img src={movie.posterUrl} alt={movie.title} className="w-64 mb-4" />}
-      <p className="mb-2"><strong>Description:</strong> {movie.description}</p>
-      <p className="mb-2"><strong>Duration:</strong> {movie.duration} mins</p>
-      <p className="mb-2"><strong>Genre:</strong> {movie.genre?.join(', ')}</p>
-      <p className="mb-2"><strong>Language:</strong> {movie.language}</p>
-      <p className="mb-2"><strong>Certificate:</strong> {movie.certificate}</p>
-      <p className="mb-4"><strong>Release Date:</strong> {new Date(movie.releaseDate).toDateString()}</p>
+    <div className="container my-5">
+      {/* Back Button */}
+      <button className="btn btn-light border mb-4" onClick={handleBack}>
+        <FaArrowLeft className="me-2" />
+        Back to Movies
+      </button>
 
-      <div className="mb-4">
-        <h3 className="font-semibold">Select Theatre:</h3>
-        <select
-          className="border p-2 w-full"
-          value={selectedTheatre}
-          onChange={e => setSelectedTheatre(e.target.value)}
-        >
-          <option value="">-- Select Theatre --</option>
-          {availableTheatres.map(theatre => (
-            <option key={theatre._id} value={theatre._id}>{theatre.name}</option>
-          ))}
-        </select>
+      {/* Main Content Grid */}
+      <div className="row g-4">
+        {/* Left - Poster and Info */}
+        <div className="col-md-4">
+          <div className="card p-3 shadow-sm">
+            <img
+              src={movie.posterUrl}
+              alt={movie.title}
+              className="img-fluid rounded mb-3"
+              style={{
+                width: '100%',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}
+            />
+            <span className="badge bg-light text-dark border mb-2">
+              {movie.genre?.[0] || 'Genre'}
+            </span>
+            <p><FaClock className="me-2 text-muted" />{movie.duration} minutes</p>
+            <p><strong>Language:</strong> {movie.language}</p>
+            <p><strong>Certificate:</strong> {movie.certificate}</p>
+            <p><strong>Release Date:</strong> {new Date(movie.releaseDate).toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        {/* Right - Title, Description, and Showtimes */}
+        <div className="col-md-8">
+          <div className="card p-4 shadow-sm mb-4">
+            <h2 className="fw-bold">{movie.title}</h2>
+            <p className="text-muted">{movie.description}</p>
+          </div>
+
+          <div className="card p-4 shadow-sm">
+            <h5 className="fw-semibold mb-3">Available Showtimes</h5>
+
+            {showtimes.length === 0 ? (
+              <p className="text-muted">No showtimes available yet.</p>
+            ) : (
+              <div className="d-flex flex-column gap-3">
+                {showtimes.map(show => (
+                  <div
+                    key={show._id}
+                    className="border rounded p-3 d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      <div className="fw-semibold">{show.theatre.name}</div>
+                      <div className="text-muted small">
+                        <FaMapMarkerAlt className="me-1" />
+                        {show.theatre.location}
+                      </div>
+                      <div className="text-muted small">Screen: {show.screenName}</div>
+                      <div className="text-muted small mt-1">
+                        <FaClock className="me-1" />
+                        {show.date} at {show.time} &nbsp;
+                        <span className="text-success">₹{show.price}</span>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-dark btn-sm"
+                      onClick={() => handleBookNow(show._id)}
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      {availableScreens.length > 0 && (
-        <div className="mb-4">
-          <h3 className="font-semibold">Select Screen:</h3>
-          <select
-            className="border p-2 w-full"
-            value={selectedScreen}
-            onChange={e => setSelectedScreen(e.target.value)}
-          >
-            <option value="">-- Select Screen --</option>
-            {availableScreens.map(screen => (
-              <option key={screen} value={screen}>{screen}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {availableShowtimes.length > 0 && (
-        <div className="mb-4">
-          <h3 className="font-semibold">Select Showtime:</h3>
-          <select
-            className="border p-2 w-full"
-            value={selectedShowtimeId}
-            onChange={e => setSelectedShowtimeId(e.target.value)}
-          >
-            <option value="">-- Select Showtime --</option>
-            {availableShowtimes.map(show => (
-              <option key={show._id} value={show._id}>
-                {`${show.date} ${show.time}`} (₹{show.price})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {selectedShowtimeId && (
-        <button
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          onClick={handleSelectSeat}
-        >
-          Select Seats
-        </button>
-      )}
     </div>
   );
 }

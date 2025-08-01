@@ -1,0 +1,515 @@
+# Theatre Ticket Booking System - Backend Analysis
+
+## Project Overview
+This is a Next.js-based theatre ticket booking application with a MongoDB backend. The system handles user authentication, theatre management, movie scheduling, and seat booking functionality.
+
+## Technology Stack
+- **Framework**: Next.js 15.3.3 with React 19.0.0
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: Custom authentication with bcryptjs for password hashing
+- **PDF Generation**: pdf-lib for ticket generation
+- **HTTP Client**: Axios for API calls
+
+## Database Configuration
+**File**: `src/lib/mongoose.js`
+- **Database URL**: mongodb://127.0.0.1:27017/theatre_booking_app
+- **Connection**: Uses global caching to prevent multiple connections
+- **Configuration**: Connection pooling with bufferCommands disabled
+
+## Database Models (MongoDB Schema)
+
+### 1. User Model (`src/models/User.js`)
+**Schema Fields:**
+- `name`: String - User's full name
+- `email`: String (unique) - User's email address
+- `passwordHash`: String - Encrypted password using bcryptjs
+- `phone`: String - User's contact number
+- `isAdmin`: Boolean (default: false) - Admin privileges flag
+
+**Key Features:**
+- Unique email constraint
+- Password encryption
+- Admin role management
+
+### 2. Theatre Model (`src/models/Theatre.js`)
+**Schema Structure:**
+```
+Theatre {
+  name: String,
+  location: String,
+  screens: [Screen],
+  timestamps: true
+}
+
+Screen (Subdocument) {
+  name: String,
+  seatLayout: {
+    rows: Number,
+    cols: Number
+  },
+  hasBalcony: Boolean (default: false),
+  balconyLayout: {
+    left: { rows: Number, cols: Number },
+    right: { rows: Number, cols: Number }
+  }
+}
+```
+
+**Key Features:**
+- Multiple screens per theatre
+- Flexible seat layout configuration
+- Balcony seating support with left/right sections
+- Automatic timestamps
+
+### 3. Movie Model (`src/models/Movie.js`)
+**Schema Fields:**
+- `title`: String - Movie title
+- `description`: String - Movie description
+- `posterUrl`: String - URL to movie poster image
+- `duration`: Number - Movie duration in minutes
+- `genre`: [String] - Array of genres
+- `language`: String - Movie language
+- `certificate`: String - Age rating (U/A, A, etc.)
+- `releaseDate`: Date - Movie release date
+- `theatres`: [ObjectId] - References to Theatre documents
+- `timestamps`: true
+
+**Key Features:**
+- Multiple genre support
+- Theatre association
+- Poster image management
+
+### 4. Showtime Model (`src/models/Showtime.js`)
+**Schema Structure:**
+```
+Showtime {
+  movie: ObjectId (ref: 'Movie'),
+  theatre: ObjectId (ref: 'Theatre'),
+  screenName: String (required),
+  date: String,
+  time: String,
+  price: Number,
+  seats: [Seat],
+  timestamps: true
+}
+
+Seat (Subdocument) {
+  number: String,
+  booked: Boolean (default: false),
+  user: ObjectId (ref: 'User')
+}
+```
+
+**Key Features:**
+- Movie-theatre-screen association
+- Individual seat booking tracking
+- Price per showtime
+- User-seat booking relationship
+
+### 5. Booking Model (`src/models/Booking.js`)
+**Schema Fields:**
+- `user`: ObjectId (ref: 'User') - Booking user
+- `showtime`: ObjectId (ref: 'Showtime') - Associated showtime
+- `seats`: [String] - Array of booked seat numbers
+- `paymentStatus`: String - Payment status tracking
+- `timestamps`: true
+
+**Key Features:**
+- User-showtime relationship
+- Multiple seat booking
+- Payment tracking
+- Automatic timestamps
+
+## API Endpoints
+
+### User Authentication APIs
+
+#### 1. User Registration (`/api/users/register`)
+**Method**: POST
+**Purpose**: Register new users with encrypted passwords
+**Input**:
+```json
+{
+  "name": "User Name",
+  "email": "user@email.com",
+  "password": "password",
+  "phone": "1234567890",
+  "isAdmin": false
+}
+```
+**Process**:
+- Validates input data
+- Hashes password using bcryptjs (10 rounds)
+- Creates user in database
+- Returns user data without password
+
+**Output**:
+```json
+{
+  "success": true,
+  "user": {
+    "_id": "userId",
+    "name": "User Name",
+    "email": "user@email.com",
+    "isAdmin": false,
+    "phone": "1234567890"
+  }
+}
+```
+
+#### 2. User Login (`/api/users/login`)
+**Method**: POST
+**Purpose**: Authenticate users and return user data
+**Input**:
+```json
+{
+  "email": "user@email.com",
+  "password": "password"
+}
+```
+**Process**:
+- Finds user by email
+- Compares password with stored hash using bcryptjs
+- Returns user data if authentication succeeds
+
+**Output**: Same as registration response
+
+### Theatre Management APIs
+
+#### 3. Add Theatre/Screen (`/api/theatres/add`)
+**Method**: POST
+**Purpose**: Create new theatre or add screen to existing theatre
+**Input for New Theatre**:
+```json
+{
+  "name": "Theatre Name",
+  "location": "Theatre Location",
+  "screen": {
+    "name": "Screen 1",
+    "seatLayout": {
+      "rows": 5,
+      "cols": 6
+    },
+    "hasBalcony": true,
+    "balconyLayout": {
+      "left": { "rows": 2, "cols": 4 },
+      "right": { "rows": 2, "cols": 4 }
+    }
+  }
+}
+```
+**Input for Adding Screen**:
+```json
+{
+  "theatreId": "existingTheatreId",
+  "screen": { ... }
+}
+```
+**Process**:
+- Creates new theatre with screen OR adds screen to existing theatre
+- Validates theatre existence for screen addition
+- Returns updated theatre data
+
+#### 4. List Theatres (`/api/theatres/list`)
+**Method**: GET
+**Purpose**: Retrieve all theatres with their screens
+**Output**:
+```json
+{
+  "success": true,
+  "theatres": [
+    {
+      "_id": "theatreId",
+      "name": "Theatre Name",
+      "location": "Location",
+      "screens": [...]
+    }
+  ]
+}
+```
+
+### Movie Management APIs
+
+#### 5. Add Movie (`/api/movies/add`)
+**Method**: POST
+**Purpose**: Add new movie to the system
+**Input**:
+```json
+{
+  "title": "Movie Title",
+  "description": "Movie Description",
+  "posterUrl": "http://poster-url.com",
+  "duration": 150,
+  "genre": ["Action", "Comedy"],
+  "language": "English",
+  "certificate": "U/A",
+  "releaseDate": "2025-07-28"
+}
+```
+**Process**:
+- Creates new movie with empty theatres array
+- Validates all required fields
+- Returns created movie data
+
+#### 6. List Movies (`/api/movies/list`)
+**Method**: GET
+**Purpose**: Retrieve all movies with populated theatre data
+**Process**:
+- Fetches all movies
+- Populates associated theatres
+**Output**: Array of movies with theatre details
+
+#### 7. Get Movie by ID (`/api/movies/[id]`)
+**Method**: GET
+**Purpose**: Retrieve specific movie with theatre details
+**Process**:
+- Finds movie by ID
+- Populates associated theatres
+- Returns 404 if not found
+
+### Showtime Management APIs
+
+#### 8. Add Showtime (`/api/showtimes/add`)
+**Method**: POST
+**Purpose**: Create new showtime with basic seat structure
+**Input**:
+```json
+{
+  "movie": "movieId",
+  "theatre": "theatreId",
+  "date": "2025-07-28",
+  "time": "18:00",
+  "price": 150,
+  "seats": ["A1", "A2", "A3", ...]
+}
+```
+**Process**:
+- Creates showtime with seats mapped to { number } objects
+- All seats initially unbooked
+
+#### 9. Add Detailed Showtime (`/api/showtimes/add-showtime`)
+**Method**: POST
+**Purpose**: Create showtime with automatic seat generation based on screen layout
+**Input**:
+```json
+{
+  "movieId": "movieId",
+  "theatreId": "theatreId",
+  "screenName": "Screen 1",
+  "date": "2025-07-28",
+  "time": "18:00",
+  "price": 150
+}
+```
+**Process**:
+- Validates theatre and screen existence
+- Automatically generates seats based on screen layout:
+  - Main seats: M{row}-{col} (e.g., M1-1, M1-2)
+  - Balcony left: BL{row}-{col}
+  - Balcony right: BR{row}-{col}
+- Associates movie with theatre
+- Creates showtime with complete seat structure
+
+#### 10. Get Showtime by ID (`/api/showtimes/[id]`)
+**Method**: GET
+**Purpose**: Retrieve specific showtime with movie and theatre details
+**Process**:
+- Finds showtime by ID
+- Populates movie (title, language) and theatre (name)
+- Returns complete showtime data
+
+#### 11. Get Showtimes by Movie (`/api/showtimes/movie/[id]`)
+**Method**: GET
+**Purpose**: Retrieve all showtimes for a specific movie
+**Process**:
+- Finds all showtimes for given movie ID
+- Populates theatre and movie data
+- Returns array of showtimes
+
+### Booking Management APIs
+
+#### 12. Create Booking (`/api/bookings/index`)
+**Method**: POST
+**Purpose**: Book seats for a showtime
+**Input**:
+```json
+{
+  "userId": "userId",
+  "showtimeId": "showtimeId",
+  "seats": ["M1-1", "M1-2"]
+}
+```
+**Process**:
+- Validates showtime existence
+- Checks seat availability
+- Marks seats as booked and assigns to user
+- Creates booking record
+- Returns booking confirmation with showtime details
+
+**Key Business Logic**:
+- Prevents double booking
+- Atomic seat booking operation
+- Updates both Showtime and Booking collections
+
+## Seat Management System
+
+### Seat Numbering Convention
+- **Main Area**: M{row}-{col} (e.g., M1-1, M2-5)
+- **Balcony Left**: BL{row}-{col} (e.g., BL1-1, BL2-3)
+- **Balcony Right**: BR{row}-{col} (e.g., BR1-1, BR2-4)
+
+### Seat Status Management
+- **Available**: booked: false, user: null
+- **Booked**: booked: true, user: userId
+- **Selected** (Frontend): Temporary state during booking process
+
+### Booking Process Flow
+1. User selects seats in frontend
+2. Frontend validates seat availability
+3. API call to `/api/bookings` with seat selection
+4. Backend validates seats are still available
+5. Marks seats as booked atomically
+6. Creates booking record
+7. Returns confirmation
+
+## Frontend Integration Points
+
+### Authentication Flow
+- Login/Register APIs return user object
+- User data stored in localStorage
+- isAdmin flag determines access to admin dashboard
+- No JWT tokens - simple session management
+
+### Admin Dashboard
+- Three main sections: Theatre Management, Movie Management, Showtime Management
+- Form-based interfaces for all CRUD operations
+- Real-time feedback with success/error messages
+
+### User Booking Flow
+1. Browse movies (`/api/movies/list`)
+2. Select movie and view showtimes (`/api/showtimes/movie/[id]`)
+3. Choose showtime and navigate to booking page
+4. Seat selection interface with real-time availability
+5. Confirm booking (`/api/bookings`)
+6. PDF ticket generation using pdf-lib
+
+### PDF Ticket Generation
+- Client-side PDF generation using pdf-lib
+- Includes: Movie title, theatre, screen, date, time, seats, total price
+- Automatic download after successful booking
+
+## Error Handling
+
+### API Error Responses
+- Consistent error format: `{ success: false, error: "Error message" }`
+- HTTP status codes: 400 (Bad Request), 401 (Unauthorized), 404 (Not Found), 405 (Method Not Allowed), 500 (Internal Server Error)
+
+### Validation
+- Required field validation on all forms
+- Email uniqueness constraint
+- Seat availability validation
+- Theatre/Screen existence validation
+
+## Security Considerations
+
+### Password Security
+- bcryptjs with 10 salt rounds
+- Passwords never returned in API responses
+- Hash stored in passwordHash field
+
+### Admin Access
+- isAdmin flag in user model
+- Frontend admin route protection
+- No API-level admin middleware (security gap)
+
+### Data Validation
+- Basic input validation
+- No input sanitization implemented
+- No rate limiting
+- No CORS configuration
+
+## Database Relationships
+
+### User → Booking (One-to-Many)
+- Users can have multiple bookings
+- Booking references user ID
+
+### Movie → Showtime (One-to-Many)
+- Movies can have multiple showtimes
+- Showtime references movie ID
+
+### Theatre → Showtime (One-to-Many)
+- Theatres can host multiple showtimes
+- Showtime references theatre ID
+
+### Movie ↔ Theatre (Many-to-Many)
+- Movies can play in multiple theatres
+- Theatres can show multiple movies
+- Relationship maintained through showtimes
+
+### Showtime → Booking (One-to-Many)
+- Showtimes can have multiple bookings
+- Booking references showtime ID
+
+### User → Seat (Many-to-Many through Booking)
+- Users can book multiple seats
+- Seats can be booked by different users across showtimes
+- Relationship tracked in showtime.seats array
+
+## Performance Considerations
+
+### Database Queries
+- Population used for related data (joins)
+- No indexing strategy defined
+- No query optimization
+- No pagination implemented
+
+### Caching
+- Global mongoose connection caching
+- No application-level caching
+- No CDN for static assets
+
+## Deployment Configuration
+
+### Environment Variables
+- MONGODB_URI hardcoded (should be environment variable)
+- No environment-specific configurations
+- No production/development separation
+
+### Build Configuration
+- Next.js standard build process
+- Turbopack enabled for development
+- TypeScript support configured
+
+## Areas for Improvement
+
+### Security
+1. Implement JWT-based authentication
+2. Add API middleware for admin route protection
+3. Input sanitization and validation
+4. Rate limiting
+5. CORS configuration
+
+### Performance
+1. Database indexing strategy
+2. Query optimization
+3. Pagination for large datasets
+4. Caching strategy
+5. Image optimization for posters
+
+### Code Quality
+1. Error boundary implementation
+2. Input validation middleware
+3. API response standardization
+4. TypeScript migration for backend
+5. Environment variable management
+
+### Features
+1. Payment gateway integration
+2. Email notifications
+3. Booking cancellation
+4. Seat selection time limits
+5. Multiple screen types
+6. Dynamic pricing
+
+This backend provides a solid foundation for a theatre booking system but requires security and performance improvements for production use.

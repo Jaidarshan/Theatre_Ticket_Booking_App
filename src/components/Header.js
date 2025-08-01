@@ -16,22 +16,33 @@ export default function Header() {
   }
 
   return (
-    <header style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #ddd' }}>
-      <Link href="/"><a><h1>Theatre Booking</h1></a></Link>
-      <nav>
-        {user ? (
-          <>
-            <span>Welcome, {user.name}</span> |{' '}
-            {user.isAdmin && <Link href="/admin/dashboard"><a>Admin Dashboard</a></Link>} |{' '}
-            <button onClick={logout}>Logout</button>
-          </>
-        ) : (
-          <>
-            <Link href="/login">Login</Link> |{' '}
-            <Link href="/register">Register</Link>
-          </>
-        )}
-      </nav>
+    <header className="navbar navbar-expand-lg navbar-light bg-light border-bottom shadow-sm px-4 py-3">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
+        <Link href="/" className="navbar-brand">
+          <h4 className="mb-0">🎬 Theatre Booking</h4>
+        </Link>
+
+        <nav className="d-flex align-items-center gap-3">
+          {user ? (
+            <>
+              <span className="text-muted">Welcome, <strong>{user.name}</strong></span>
+              {user.isAdmin && (
+                <Link href="/admin/dashboard" className="btn btn-outline-primary btn-sm">
+                  Admin Dashboard
+                </Link>
+              )}
+              <button className="btn btn-outline-danger btn-sm" onClick={logout}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="btn btn-outline-secondary btn-sm">Login</Link>
+              <Link href="/register" className="btn btn-primary btn-sm">Register</Link>
+            </>
+          )}
+        </nav>
+      </div>
     </header>
   );
 }

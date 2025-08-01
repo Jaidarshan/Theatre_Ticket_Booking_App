@@ -1,6 +1,7 @@
+'use client';
 import { useEffect, useState } from 'react';
 
-export default function TheatreForm() {
+export default function TheatreForm({ onSuccess }) {
   const [theatres, setTheatres] = useState([]);
   const [isNewTheatre, setIsNewTheatre] = useState(true);
   const [form, setForm] = useState({
@@ -26,7 +27,7 @@ export default function TheatreForm() {
       });
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, type, value, checked } = e.target;
     setForm(prev => ({
       ...prev,
@@ -34,7 +35,7 @@ export default function TheatreForm() {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setMessage(null);
 
@@ -49,26 +50,25 @@ export default function TheatreForm() {
 
     if (form.hasBalcony) {
       screen.balconyLayout = {
-        left: { rows: parseInt(form.balconyLeftRows), cols: parseInt(form.balconyLeftCols) },
-        right: { rows: parseInt(form.balconyRightRows), cols: parseInt(form.balconyRightCols) },
+        left: {
+          rows: parseInt(form.balconyLeftRows),
+          cols: parseInt(form.balconyLeftCols),
+        },
+        right: {
+          rows: parseInt(form.balconyRightRows),
+          cols: parseInt(form.balconyRightCols),
+        },
       };
     }
 
     const payload = isNewTheatre
-      ? {
-          name: form.name,
-          location: form.location,
-          screen
-        }
-      : {
-          theatreId: form.theatreId,
-          screen
-        };
+      ? { name: form.name, location: form.location, screen }
+      : { theatreId: form.theatreId, screen };
 
     const res = await fetch('/api/theatres/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
@@ -89,65 +89,211 @@ export default function TheatreForm() {
         balconyRightCols: 4,
       });
       setIsNewTheatre(true);
+      
+      // Trigger stats refresh in parent component
+      if (onSuccess) {
+        onSuccess();
+      }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <label>
-        <input type="radio" checked={isNewTheatre} onChange={() => setIsNewTheatre(true)} />
-        Create New Theatre
-      </label>
-      <label>
-        <input type="radio" checked={!isNewTheatre} onChange={() => setIsNewTheatre(false)} />
-        Add Screen to Existing Theatre
-      </label>
+    <div
+      style={{
+        maxWidth: '800px',
+        margin: '40px auto',
+        padding: '30px',
+        borderRadius: '10px',
+        backgroundColor: '#fff',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+      }}
+    >
+      <h3 style={{ marginBottom: '10px' }}>Add Theatre or Screen</h3>
+      <p style={{ color: '#888', marginBottom: '25px' }}>
+        Create a new theatre or add a screen to an existing theatre.
+      </p>
 
-      {!isNewTheatre && (
-        <select name="theatreId" value={form.theatreId} onChange={handleChange} required>
-          <option value="">Select Theatre</option>
-          {theatres.map(t => (
-            <option key={t._id} value={t._id}>{t.name} - {t.location}</option>
-          ))}
-        </select>
-      )}
-
-      {isNewTheatre && (
-        <>
-          <input name="name" placeholder="Theatre Name" value={form.name} onChange={handleChange} required />
-          <input name="location" placeholder="Location" value={form.location} onChange={handleChange} required />
-        </>
-      )}
-
-      <input name="screenName" placeholder="Screen Name (e.g. Screen 1)" value={form.screenName} onChange={handleChange} required />
-      <label>Main Seats (Rows x Columns)</label>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <input type="number" name="seatRows" value={form.seatRows} onChange={handleChange} required min={1} />
-        <input type="number" name="seatCols" value={form.seatCols} onChange={handleChange} required min={1} />
-      </div>
-
-      <label>
-        <input type="checkbox" name="hasBalcony" checked={form.hasBalcony} onChange={handleChange} />
-        Has Balcony
-      </label>
-
-      {form.hasBalcony && (
-        <>
-          <label>Balcony Left (Rows x Cols):</label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <input type="number" name="balconyLeftRows" value={form.balconyLeftRows} onChange={handleChange} />
-            <input type="number" name="balconyLeftCols" value={form.balconyLeftCols} onChange={handleChange} />
+      <form onSubmit={handleSubmit}>
+        {/* Toggle Options */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontWeight: 500, marginBottom: '10px', display: 'block' }}>
+            Select Option:
+          </label>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="radio"
+                checked={isNewTheatre}
+                onChange={() => setIsNewTheatre(true)}
+              />
+              Create New Theatre
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="radio"
+                checked={!isNewTheatre}
+                onChange={() => setIsNewTheatre(false)}
+              />
+              Add Screen to Existing Theatre
+            </label>
           </div>
-          <label>Balcony Right (Rows x Cols):</label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <input type="number" name="balconyRightRows" value={form.balconyRightRows} onChange={handleChange} />
-            <input type="number" name="balconyRightCols" value={form.balconyRightCols} onChange={handleChange} />
-          </div>
-        </>
-      )}
+        </div>
 
-      <button type="submit">{isNewTheatre ? 'Add New Theatre' : 'Add Screen to Theatre'}</button>
-      {message && <p>{message}</p>}
-    </form>
+        {!isNewTheatre && (
+          <div style={{ marginBottom: '20px' }}>
+            <label className="form-label">Select Theatre</label>
+            <select
+              name="theatreId"
+              className="form-select"
+              value={form.theatreId}
+              onChange={handleChange}
+              required
+            >
+              <option value="">-- Select Theatre --</option>
+              {theatres.map(t => (
+                <option key={t._id} value={t._id}>
+                  {t.name} — {t.location}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {isNewTheatre && (
+          <>
+            <div style={{ marginBottom: '20px' }}>
+              <label className="form-label">Theatre Name</label>
+              <input
+                type="text"
+                name="name"
+                className="form-control"
+                value={form.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label className="form-label">Location</label>
+              <input
+                type="text"
+                name="location"
+                className="form-control"
+                value={form.location}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        <div style={{ marginBottom: '20px' }}>
+          <label className="form-label">Screen Name</label>
+          <input
+            type="text"
+            name="screenName"
+            className="form-control"
+            value={form.screenName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label className="form-label">Main Area (Rows × Columns)</label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="number"
+              name="seatRows"
+              className="form-control"
+              value={form.seatRows}
+              onChange={handleChange}
+              min={1}
+              required
+            />
+            <span style={{ lineHeight: '38px' }}>×</span>
+            <input
+              type="number"
+              name="seatCols"
+              className="form-control"
+              value={form.seatCols}
+              onChange={handleChange}
+              min={1}
+              required
+            />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              name="hasBalcony"
+              checked={form.hasBalcony}
+              onChange={handleChange}
+            />
+            Has Balcony
+          </label>
+        </div>
+
+        {form.hasBalcony && (
+          <>
+            <div style={{ marginBottom: '20px' }}>
+              <label className="form-label">Balcony Left (Rows × Columns)</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="number"
+                  name="balconyLeftRows"
+                  className="form-control"
+                  value={form.balconyLeftRows}
+                  onChange={handleChange}
+                />
+                <span style={{ lineHeight: '38px' }}>×</span>
+                <input
+                  type="number"
+                  name="balconyLeftCols"
+                  className="form-control"
+                  value={form.balconyLeftCols}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label className="form-label">Balcony Right (Rows × Columns)</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="number"
+                  name="balconyRightRows"
+                  className="form-control"
+                  value={form.balconyRightRows}
+                  onChange={handleChange}
+                />
+                <span style={{ lineHeight: '38px' }}>×</span>
+                <input
+                  type="number"
+                  name="balconyRightCols"
+                  className="form-control"
+                  value={form.balconyRightCols}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            type="submit"
+            className="btn btn-dark"
+            style={{ padding: '10px 20px', fontWeight: 'bold' }}
+          >
+            {isNewTheatre ? 'Create Theatre' : 'Add Screen'}
+          </button>
+          {message && (
+            <span style={{ color: '#555', fontSize: '0.9rem' }}>{message}</span>
+          )}
+        </div>
+      </form>
+    </div>
   );
 }

@@ -18,7 +18,7 @@ export default function SeatSelector({ seats = [], onSeatsChange, selectedSeats 
   };
 
   useEffect(() => {
-    onSeatsChange([]); 
+    onSeatsChange([]);
   }, [seats]);
 
   const matrix = seats.reduce(
@@ -35,35 +35,59 @@ export default function SeatSelector({ seats = [], onSeatsChange, selectedSeats 
     { rows: 0, cols: 0 }
   );
 
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(${matrix.cols}, minmax(0, 1fr))`,
-    gap: '0.5rem',
-  };
-
   return (
-    <div>
-      <h4 className="text-lg font-semibold mb-2">Select Seats</h4>
-      <div style={gridStyle}>
+    <div className="container mb-4">
+      <h4 className="mb-3 fw-semibold">Select Seats</h4>
+      <div
+        className="d-grid gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${matrix.cols}, 1fr)`,
+          display: 'grid',
+        }}
+      >
         {seats.map((seat) => {
           const isSelected = selectedSeats.includes(seat.number);
-          const bgClass = seat.booked
-            ? 'bg-red-500 text-white'
-            : isSelected
-            ? 'bg-blue-500 text-white'
-            : 'bg-white';
+
+          let backgroundColor = '#f0ededd2'; // Default light grey
+          if (seat.booked) {
+            backgroundColor = '#ee5a5aff'; // Light red for booked
+          } else if (isSelected) {
+            backgroundColor = '#6fbdf8ff'; // Light blue for selected
+          }
 
           return (
             <button
               key={seat.number}
               onClick={() => toggleSeat(seat.number)}
               disabled={seat.booked}
-              className={`w-10 h-10 border border-gray-400 ${bgClass} rounded transition-colors`}
+              className="btn border"
+              style={{
+                width: '20px',
+                height: '20px',
+                backgroundColor,
+                borderColor: '#ccc',
+                cursor: seat.booked ? 'not-allowed' : 'pointer',
+              }}
             >
-              {seat.number}
             </button>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="d-flex gap-3 mt-3 align-items-center">
+        <div className="d-flex align-items-center gap-1">
+          <div style={{ width: '20px', height: '20px', backgroundColor: '#f0ededd2', border: '1px solid #ccc' }}></div>
+          <small>Available</small>
+        </div>
+        <div className="d-flex align-items-center gap-1">
+          <div style={{ width: '20px', height: '20px', backgroundColor: '#ee5a5aff', border: '1px solid #ccc' }}></div>
+          <small>Booked</small>
+        </div>
+        <div className="d-flex align-items-center gap-1">
+          <div style={{ width: '20px', height: '20px', backgroundColor: '#6fbdf8ff', border: '1px solid #ccc' }}></div>
+          <small>Selected</small>
+        </div>
       </div>
     </div>
   );

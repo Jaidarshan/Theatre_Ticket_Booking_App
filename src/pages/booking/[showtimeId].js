@@ -32,14 +32,12 @@ async function generateTicketPDF({ movieTitle, theatreName, screenName, date, ti
 
   const pdfBytes = await pdfDoc.save();
 
-  // Trigger download
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `${movieTitle.replace(/\s+/g, '_')}_Ticket.pdf`;
   link.click();
 }
-
 
 export default function BookingPage() {
   const router = useRouter();
@@ -103,70 +101,94 @@ export default function BookingPage() {
       setBookedSeats([...selectedSeats]);
       setSelectedSeats([]);
       await fetchShowtime(showtime._id);
-
     } else {
       setMessage(data.error || 'Booking failed.');
     }
   };
 
   if (!showtime) {
-    return <div className="text-center mt-10 text-lg">{message || 'Loading showtime...'}</div>;
+    return <div className="text-center mt-5 fs-5">{message || 'Loading showtime...'}</div>;
   }
 
   const totalPrice = selectedSeats.length * showtime.price;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        Booking for {showtime.movie.title}
-      </h1>
-      <p><strong>Theatre:</strong> {showtime.theatre.name}</p>
-      <p><strong>Screen:</strong> {showtime.screenName}</p>
-      <p><strong>Date:</strong> {showtime.date}</p>
-      <p><strong>Time:</strong> {showtime.time}</p>
-      <p className="mb-4"><strong>Price per Seat:</strong> ₹{showtime.price}</p>
-
-      <SeatSelector
-        seats={showtime.seats}
-        onSeatsChange={setSelectedSeats}
-        selectedSeats={selectedSeats}
-      />
-
-      <p className="mt-4 font-semibold">Total Price: ₹{totalPrice}</p>
-
-      <button
-        className={`mt-4 px-4 py-2 rounded text-white ${selectedSeats.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-          }`}
-        onClick={handleBooking}
-        disabled={selectedSeats.length === 0 || loading}
-      >
-        {loading ? 'Booking...' : 'Confirm Booking'}
+    <div className="container my-5">
+      <button className="btn btn-outline-secondary mb-4" onClick={() => router.back()}>
+        &larr; Back
       </button>
-      {bookedSeats.length > 0 && (
-        <button
-          className="ml-4 mt-4 px-4 py-2 rounded text-white bg-blue-600 hover:bg-blue-700"
-          onClick={() =>
-            generateTicketPDF({
-              movieTitle: showtime.movie.title,
-              theatreName: showtime.theatre.name,
-              screenName: showtime.screenName,
-              date: showtime.date,
-              time: showtime.time,
-              language: showtime.movie.language,
-              seats: bookedSeats,
-              totalPrice: bookedSeats.length * showtime.price,
-            })
-          }
-        >
-          Download Ticket
-        </button>
-      )}
 
-      {message && (
-        <p className={`mt-4 ${message.includes('successful') ? 'text-green-600' : 'text-red-600'}`}>
-          {message}
-        </p>
-      )}
+      <div className="row">
+        {/* Seat Selection */}
+        <div className="col-md-8 mb-4">
+          <div className="card shadow-sm p-4">
+            <h5 className="fw-semibold mb-3">Select Your Seats</h5>
+            <div className="text-center text-muted mb-2" style={{ fontSize: '0.9rem' }}>SCREEN</div>
+            <hr className="mb-3 mt-0" />
+
+            <div className="fw-semibold mb-2">Main Area</div>
+
+            <SeatSelector
+              seats={showtime.seats}
+              onSeatsChange={setSelectedSeats}
+              selectedSeats={selectedSeats}
+            />
+          </div>
+        </div>
+
+        {/* Booking Summary */}
+        <div className="col-md-4">
+          <div className="card shadow-sm p-4">
+            <h5 className="fw-bold mb-3">Booking Summary</h5>
+            <p className="mb-1"><strong>{showtime.movie.title}</strong></p>
+            <p className="mb-1 text-muted">{showtime.movie.language}</p>
+            <hr />
+            <p className="mb-1"><strong>Theatre:</strong> {showtime.theatre.name}</p>
+            <p className="mb-1"><strong>Screen:</strong> {showtime.screenName}</p>
+            <p className="mb-1"><strong>{showtime.date}</strong></p>
+            <p className="mb-3"><strong>{showtime.time}</strong></p>
+            <hr />
+
+            <p className="mb-1"><strong>Seats:</strong> ({selectedSeats.length}) {selectedSeats.join(', ')}</p>
+            <p className="mb-3"><strong>Total:</strong> ₹{totalPrice}</p>
+
+            <button
+              className={`btn btn-dark w-100 mb-2 ${selectedSeats.length === 0 || loading ? 'disabled' : ''}`}
+              onClick={handleBooking}
+              disabled={selectedSeats.length === 0 || loading}
+            >
+              {loading ? 'Booking...' : `Book Tickets (₹${totalPrice})`}
+            </button>
+
+            {bookedSeats.length > 0 && (
+              <button
+                className="btn btn-outline-primary w-100"
+                onClick={() =>
+                  generateTicketPDF({
+                    movieTitle: showtime.movie.title,
+                    theatreName: showtime.theatre.name,
+                    screenName: showtime.screenName,
+                    date: showtime.date,
+                    time: showtime.time,
+                    language: showtime.movie.language,
+                    seats: bookedSeats,
+                    totalPrice: bookedSeats.length * showtime.price,
+                  })
+                }
+              >
+                Download Ticket
+              </button>
+            )}
+          </div>
+
+          {message && (
+            <div className={`alert mt-3 ${message.includes('successful') ? 'alert-success' : 'alert-danger'}`}>
+              {message}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
+
 }
