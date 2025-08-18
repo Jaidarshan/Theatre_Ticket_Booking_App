@@ -3,31 +3,219 @@ import { useRouter } from 'next/router';
 import SeatSelector from '@/components/SeatSelector';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-async function generateTicketPDF({ movieTitle, theatreName, screenName, date, time, language, seats, totalPrice }) {
+async function generateTicketPDF({ movieTitle, theatreName, screenName, date, time, language, seats, totalPrice, posterUrl }) {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage();
+  const page = pdfDoc.addPage([600, 400]); // Wider ticket format
   const { width, height } = page.getSize();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  let y = height - 50;
-  const lineHeight = 20;
+  // Background color (light blue)
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: width,
+    height: height,
+    color: rgb(0.95, 0.97, 1),
+  });
 
-  const lines = [
-    `Movie Ticket`,
-    `Movie: ${movieTitle}`,
-    `Language: ${language}`,
-    `Theatre: ${theatreName}`,
-    `Screen: ${screenName}`,
-    `Date: ${date}`,
-    `Time: ${time}`,
-    `Seats: ${seats.join(', ')}`,
-    `Total Seats: ${seats.length}`,
-    `Total Price: Rs. ${totalPrice}`,
-  ];
+  // Header background
+  page.drawRectangle({
+    x: 0,
+    y: height - 80,
+    width: width,
+    height: 80,
+    color: rgb(0.2, 0.3, 0.6),
+  });
 
-  lines.forEach((text) => {
-    page.drawText(text, { x: 50, y, size: 14, font, color: rgb(0, 0, 0) });
-    y -= lineHeight;
+  // Movie poster (if available) - moved to right side
+  let posterImage = null;
+  let imageX = width - 110; // Position on right side
+  let imageWidth = 80;
+  let imageHeight = 120;
+
+  if (posterUrl) {
+    try {
+      console.log('Attempting to fetch poster from:', posterUrl); // Debug log
+      const imageResponse = await fetch(posterUrl);
+      if (imageResponse.ok) {
+        const imageArrayBuffer = await imageResponse.arrayBuffer();
+        
+        // Try to embed as JPG first, then PNG
+        try {
+          posterImage = await pdfDoc.embedJpg(imageArrayBuffer);
+          console.log('Successfully embedded JPG poster'); // Debug log
+        } catch {
+          try {
+            posterImage = await pdfDoc.embedPng(imageArrayBuffer);
+            console.log('Successfully embedded PNG poster'); // Debug log
+          } catch (e) {
+            console.log('Could not embed poster image:', e);
+          }
+        }
+      } else {
+        console.log('Failed to fetch poster, status:', imageResponse.status);
+      }
+    } catch (e) {
+      console.log('Error fetching poster:', e);
+    }
+  } else {
+    console.log('No poster URL provided');
+  }
+
+  if (posterImage) {
+    // Draw the movie poster on the right side
+    page.drawImage(posterImage, {
+      x: imageX,
+      y: height - 200,
+      width: imageWidth,
+      height: imageHeight,
+    });
+  }
+
+  // Title
+  page.drawText('MOVIE TICKET', {
+    x: 30,
+    y: height - 35,
+    size: 24,
+    font: helveticaBold,
+    color: rgb(1, 1, 1),
+  });
+
+  // Ticket number (random)
+  const ticketNumber = `TKT${Date.now().toString().slice(-8)}`;
+  page.drawText(`Ticket #${ticketNumber}`, {
+    x: width - 180,
+    y: height - 35,
+    size: 14,
+    font: helvetica,
+    color: rgb(1, 1, 1),
+  });
+
+  // Content area starts from left side (poster is now on right)
+  const contentX = 30;
+  let y = height - 110;
+  const lineHeight = 25;
+
+  // Movie details
+  page.drawText(movieTitle, {
+    x: contentX,
+    y: y,
+    size: 20,
+    font: helveticaBold,
+    color: rgb(0, 0, 0),
+  });
+  y -= 30;
+
+  page.drawText(`Language: ${language}`, {
+    x: contentX,
+    y: y,
+    size: 12,
+    font: helvetica,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+  y -= 20;
+
+  // Theatre and screen info
+  page.drawText(`${theatreName}`, {
+    x: contentX,
+    y: y,
+    size: 14,
+    font: helveticaBold,
+    color: rgb(0, 0, 0),
+  });
+  y -= 20;
+
+  page.drawText(`Screen: ${screenName}`, {
+    x: contentX,
+    y: y,
+    size: 12,
+    font: helvetica,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+  y -= 25;
+
+  // Date and time box
+  page.drawRectangle({
+    x: contentX,
+    y: y - 15,
+    width: 200,
+    height: 30,
+    color: rgb(0.9, 0.95, 1),
+    borderColor: rgb(0.2, 0.3, 0.6),
+    borderWidth: 1,
+  });
+
+  page.drawText(`${date} • ${time}`, {
+    x: contentX + 10,
+    y: y - 5,
+    size: 12,
+    font: helveticaBold,
+    color: rgb(0.2, 0.3, 0.6),
+  });
+  y -= 45;
+
+  // Seats section
+  page.drawText('SEATS:', {
+    x: contentX,
+    y: y,
+    size: 12,
+    font: helveticaBold,
+    color: rgb(0, 0, 0),
+  });
+
+  page.drawText(seats.join(', '), {
+    x: contentX + 60,
+    y: y,
+    size: 12,
+    font: helvetica,
+    color: rgb(0.2, 0.3, 0.6),
+  });
+  y -= 20;
+
+  // Total price section - moved to left side
+  page.drawRectangle({
+    x: contentX,
+    y: y - 15,
+    width: 120,
+    height: 30,
+    color: rgb(0.2, 0.7, 0.3),
+  });
+
+  page.drawText('TOTAL', {
+    x: contentX + 10,
+    y: y - 10,
+    size: 10,
+    font: helvetica,
+    color: rgb(1, 1, 1),
+  });
+
+  page.drawText(`Rs. ${totalPrice}`, {
+    x: contentX + 10,
+    y: y + 2,
+    size: 14,
+    font: helveticaBold,
+    color: rgb(1, 1, 1),
+  });
+
+  // Footer
+  page.drawText('Thank you for choosing our cinema! Show this ticket at the entrance.', {
+    x: 30,
+    y: 30,
+    size: 10,
+    font: helvetica,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+
+  // Decorative border
+  page.drawRectangle({
+    x: 10,
+    y: 10,
+    width: width - 20,
+    height: height - 20,
+    borderColor: rgb(0.2, 0.3, 0.6),
+    borderWidth: 2,
   });
 
   const pdfBytes = await pdfDoc.save();
@@ -173,6 +361,7 @@ export default function BookingPage() {
                     language: showtime.movie.language,
                     seats: bookedSeats,
                     totalPrice: bookedSeats.length * showtime.price,
+                    posterUrl: showtime.movie.posterUrl,
                   })
                 }
               >
